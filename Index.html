@@ -1,0 +1,1216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Springbok Finance Control Portal</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<script>
+tailwind.config={theme:{extend:{colors:{sb:{blue:'#0056a3',green:'#37b34a',dark:'#0a1628',light:'#e8f0fe',greenlight:'#e6f7ea',purple:'#7c3aed',purplelight:'#f3e5f5',red:'#dc2626',orange:'#ea580c',yellow:'#ca8a04'}},fontFamily:{sans:['Montserrat','sans-serif']}}}}
+</script>
+<style>
+:root{--sidebar-w:260px}
+*{scrollbar-width:thin;scrollbar-color:#cbd5e1 transparent}
+body{font-family:'Montserrat',sans-serif;margin:0;overflow-x:hidden}
+.sidebar{width:var(--sidebar-w);min-height:calc(100vh - 44px);transition:transform .3s ease}
+@media(max-width:768px){.sidebar{position:fixed;z-index:40;transform:translateX(-100%)}.sidebar.open{transform:translateX(0)}}
+.drawer-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:50;opacity:0;pointer-events:none;transition:opacity .3s}
+.drawer-overlay.open{opacity:1;pointer-events:auto}
+.drawer-panel{position:fixed;top:0;right:0;bottom:0;width:480px;max-width:100vw;background:#fff;z-index:51;transform:translateX(100%);transition:transform .3s;overflow-y:auto}
+@media(max-width:540px){.drawer-panel{width:100vw}}
+.drawer-panel.open{transform:translateX(0)}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:60;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .25s}
+.modal-overlay.open{opacity:1;pointer-events:auto}
+.modal-box{background:#fff;border-radius:12px;max-width:640px;width:95%;max-height:90vh;overflow-y:auto;transform:scale(.95);transition:transform .25s}
+.modal-overlay.open .modal-box{transform:scale(1)}
+.progress-bar{height:8px;border-radius:4px;background:#e2e8f0;overflow:hidden}
+.progress-fill{height:100%;border-radius:4px;transition:width .4s}
+.flow-node{display:flex;flex-direction:column;align-items:center;min-width:100px}
+.flow-circle{width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:#fff;position:relative}
+.flow-arrow{flex:1;height:2px;background:#cbd5e1;position:relative;min-width:30px;margin-top:26px}
+.flow-arrow::after{content:'';position:absolute;right:-1px;top:-4px;border:5px solid transparent;border-left-color:#cbd5e1}
+.badge-count{position:absolute;top:-6px;right:-6px;min-width:20px;height:20px;border-radius:10px;background:#dc2626;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 5px}
+.scan-badge{display:inline-flex;align-items:center;gap:3px;background:#dbeafe;color:#1d4ed8;font-size:11px;font-weight:600;padding:2px 8px;border-radius:4px;margin-left:6px}
+.toast{animation:slideIn .3s ease,fadeOut .3s ease 2.7s forwards}
+@keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
+@keyframes fadeOut{to{transform:translateX(100%);opacity:0}}
+.spin{animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+table{border-collapse:collapse;width:100%}
+th{text-align:left;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:#64748b;padding:10px 12px;border-bottom:2px solid #e2e8f0}
+td{padding:10px 12px;border-bottom:1px solid #f1f5f9;font-size:13px;vertical-align:middle}
+tr:hover td{background:#f8fafc}
+.risk-dot{width:10px;height:10px;border-radius:50%;display:inline-block}
+input,select,textarea{font-family:'Montserrat',sans-serif}
+</style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+
+<!-- LOGIN SCREEN -->
+<div id="loginScreen" class="fixed inset-0 z-[100] flex items-center justify-center" style="background:linear-gradient(135deg,#0a1628 0%,#0056a3 60%,#37b34a 100%)">
+<div class="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md mx-4">
+  <div class="text-center mb-8">
+    <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-sb-blue mb-4"><i class="fas fa-shield-halved text-white text-2xl"></i></div>
+    <h1 class="text-2xl font-800 text-sb-dark tracking-tight">Springbok</h1>
+    <p class="text-sm text-gray-500 mt-1">Finance Control Portal</p>
+  </div>
+  <div class="space-y-4">
+    <div>
+      <label class="block text-xs font-600 text-gray-500 mb-1">SELECT YOUR ROLE</label>
+      <select id="loginRole" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-sb-blue focus:border-sb-blue outline-none">
+        <option value="">-- Choose role --</option>
+        <option value="po_owner">PO Owner (Department Manager)</option>
+        <option value="receiver">Receiver / Stores</option>
+        <option value="finance">Finance (Control Administrator)</option>
+        <option value="senior_finance">Senior Finance / CFO</option>
+      </select>
+    </div>
+    <div>
+      <label class="block text-xs font-600 text-gray-500 mb-1">YOUR NAME</label>
+      <input id="loginName" type="text" placeholder="e.g. Thabo Mokoena" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-sb-blue focus:border-sb-blue outline-none">
+    </div>
+    <div id="loginDeptWrap" class="hidden">
+      <label class="block text-xs font-600 text-gray-500 mb-1">YOUR DEPARTMENT</label>
+      <select id="loginDept" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-sb-blue focus:border-sb-blue outline-none">
+        <option value="Maintenance">Maintenance</option>
+        <option value="Production">Production</option>
+        <option value="IT">IT</option>
+        <option value="Facilities">Facilities</option>
+        <option value="Logistics">Logistics</option>
+      </select>
+    </div>
+    <button onclick="doLogin()" class="w-full bg-sb-blue text-white font-600 py-2.5 rounded-lg hover:bg-sb-blue/90 transition text-sm">Sign in</button>
+    <p id="loginError" class="text-sb-red text-xs text-center hidden"></p>
+  </div>
+</div>
+</div>
+
+<!-- APP CONTAINER -->
+<div id="app" class="hidden">
+<!-- ROLE BANNER -->
+<div id="roleBanner" class="h-11 flex items-center justify-between px-4 text-xs font-600 border-b">
+  <span id="bannerText"></span>
+  <button onclick="doLogout()" class="hover:underline flex items-center gap-1"><i class="fas fa-sign-out-alt"></i> Sign out</button>
+</div>
+<div class="flex">
+<!-- SIDEBAR -->
+<aside id="sidebar" class="sidebar bg-white border-r border-gray-200 flex-shrink-0">
+  <div class="p-4 border-b border-gray-100">
+    <div class="flex items-center gap-2">
+      <div class="w-8 h-8 rounded-lg bg-sb-blue flex items-center justify-center"><i class="fas fa-shield-halved text-white text-xs"></i></div>
+      <span class="font-700 text-sm text-sb-dark">Springbok</span>
+    </div>
+  </div>
+  <nav id="sidebarNav" class="p-3 space-y-1"></nav>
+</aside>
+<!-- MOBILE HAMBURGER -->
+<button id="hamburger" onclick="toggleSidebar()" class="md:hidden fixed bottom-4 left-4 z-30 w-12 h-12 bg-sb-blue text-white rounded-full shadow-lg flex items-center justify-center text-lg"><i class="fas fa-bars"></i></button>
+<!-- MAIN -->
+<main id="mainContent" class="flex-1 min-h-[calc(100vh-44px)] p-4 md:p-6 overflow-y-auto"></main>
+</div>
+</div>
+
+<!-- DRAWER -->
+<div id="drawerOverlay" class="drawer-overlay" onclick="closeDrawer()"></div>
+<div id="drawerPanel" class="drawer-panel"><div id="drawerContent"></div></div>
+
+<!-- MODAL -->
+<div id="modalOverlay" class="modal-overlay" onclick="if(event.target===this)closeModal()">
+<div class="modal-box" id="modalBox"></div>
+</div>
+
+<!-- TOASTS -->
+<div id="toastContainer" class="fixed top-14 right-4 z-[70] space-y-2 w-80"></div>
+
+<script>
+// ===== UTILITY SHORTCUTS =====
+const $=id=>document.getElementById(id);
+const DEPARTMENTS=['Maintenance','Production','IT','Facilities','Logistics'];
+const STAGES=['PO Created','Work Delivered','GR Posted','Invoice Controlled','Payment Scheduled','Reconciled'];
+const ROLE_LABELS={po_owner:'PO Owner',receiver:'Receiver / Stores',finance:'Finance',senior_finance:'Senior Finance / CFO'};
+
+// ===== STATE =====
+let state={user:null,view:'dashboard',records:[],vendors:{},settings:{alertDaysFirst:7,alertDaysBetween:5,alertMaxFollowups:3},filters:{search:'',dept:'',period:'',invoiceFilter:'all'},drawerRecordId:null};
+
+// ===== DATE HELPERS =====
+const today=new Date();
+const fmtDate=d=>{if(!d)return'—';const dt=new Date(d+'T00:00:00');return dt.toLocaleDateString('en-ZA',{day:'2-digit',month:'short',year:'numeric'})};
+const daysAgo=n=>{const d=new Date(today);d.setDate(d.getDate()-n);return d.toISOString().split('T')[0]};
+const daysBetween=(a,b)=>{if(!a||!b)return 0;return Math.floor((new Date(b)-new Date(a))/(86400000))};
+const todayStr=()=>today.toISOString().split('T')[0];
+
+// ===== DATA PERSISTENCE =====
+// In a real system, this would connect to a backend database / API
+function loadData(){
+  try{const d=localStorage.getItem('springbok-v2');if(d){const p=JSON.parse(d);state.records=p.records||[];state.vendors=p.vendors||{};state.settings={...state.settings,...(p.settings||{})}}}catch(e){console.error('Load error',e)}
+  if(!state.records.length)generateDemoData();
+}
+function saveData(){
+  localStorage.setItem('springbok-v2',JSON.stringify({records:state.records,vendors:state.vendors,settings:state.settings}));
+}
+
+// ===== DEMO DATA =====
+function generateDemoData(){
+  const grDate15=daysAgo(15),grDate13=daysAgo(13),grDate8=daysAgo(8),grDate5=daysAgo(5),grDate3=daysAgo(3),grDate1=daysAgo(1);
+  state.records=[
+    {id:1,poNumber:'PO-2026-001',vendor:'NCC Engineering',description:'Boiler maintenance and safety inspection',department:'Maintenance',value:85000,owner:'Thabo Mokoena',serviceStatus:'In Progress',completion:60,grStatus:'Pending',grRef:null,grDate:null,invoiceStatus:'Required',invoiceNumber:null,invoiceAmount:null,invoiceDate:null,erpInvoiceRef:null,followUpCount:0,lastFollowUp:null,vendorFlagged:false,escalated:false,paidDate:null,expectedDate:'2026-08-15',quoteRef:'Q-NCC-0451',lineItems:[],orderedQty:null,deliveryQtyReceived:null,erpGrMatched:false,erpInvoiceMatched:false,createdDate:daysAgo(25),reportingPeriod:'2026-08',timeline:[{date:daysAgo(25),action:'PO created',by:'Thabo Mokoena'},{date:daysAgo(10),action:'Completion updated to 60%',by:'Thabo Mokoena'}]},
+    {id:2,poNumber:'PO-2026-002',vendor:'DrillCo SA',description:'Drill bits replacement — 50x tungsten carbide bits',department:'Production',value:42000,owner:'Thabo Mokoena',serviceStatus:'Completed',completion:100,grStatus:'Posted',grRef:'GR-2026-0018',grDate:grDate8,invoiceStatus:'Approved',invoiceNumber:'INV-DC-4421',invoiceAmount:42000,invoiceDate:grDate5,erpInvoiceRef:'ERP-INV-2026-0088',followUpCount:0,lastFollowUp:null,vendorFlagged:false,escalated:false,paidDate:null,expectedDate:'2026-07-20',quoteRef:'Q-DC-1120',lineItems:[],orderedQty:50,deliveryQtyReceived:50,erpGrMatched:true,erpInvoiceMatched:false,createdDate:daysAgo(30),reportingPeriod:'2026-07',timeline:[{date:daysAgo(30),action:'PO created',by:'Thabo Mokoena'},{date:daysAgo(12),action:'Service marked complete',by:'Thabo Mokoena'},{date:grDate8,action:'GR posted — GR-2026-0018',by:'Finance'},{date:grDate5,action:'Invoice received — INV-DC-4421',by:'Finance'},{date:grDate3,action:'Invoice approved — ERP-INV-2026-0088',by:'Finance'}]},
+    {id:3,poNumber:'PO-2026-003',vendor:'TechParts Distributors',description:'PLC controller supply and programming — 2 units',department:'IT',value:128000,owner:'Sarah van der Berg',serviceStatus:'Completed',completion:100,grStatus:'Posted',grRef:'GR-2026-0022',grDate:grDate15,invoiceStatus:'Required',invoiceNumber:null,invoiceAmount:null,invoiceDate:null,erpInvoiceRef:null,followUpCount:0,lastFollowUp:null,vendorFlagged:false,escalated:false,paidDate:null,expectedDate:'2026-07-18',quoteRef:'Q-TP-0089',lineItems:[],orderedQty:2,deliveryQtyReceived:2,erpGrMatched:true,erpInvoiceMatched:false,createdDate:daysAgo(35),reportingPeriod:'2026-07',timeline:[{date:daysAgo(35),action:'PO created',by:'Sarah van der Berg'},{date:daysAgo(18),action:'Service marked complete',by:'Sarah van der Berg'},{date:grDate15,action:'GR posted — GR-2026-0022',by:'Finance'}]},
+    {id:4,poNumber:'PO-2026-004',vendor:'CleanPro Services',description:'Factory deep cleaning — production floor and warehouse',department:'Facilities',value:18500,owner:'James Nkosi',serviceStatus:'Completed',completion:100,grStatus:'Pending',grRef:null,grDate:null,invoiceStatus:'Required',invoiceNumber:null,invoiceAmount:null,invoiceDate:null,erpInvoiceRef:null,followUpCount:0,lastFollowUp:null,vendorFlagged:false,escalated:false,paidDate:null,expectedDate:'2026-07-25',quoteRef:null,lineItems:[],orderedQty:null,deliveryQtyReceived:null,erpGrMatched:false,erpInvoiceMatched:false,createdDate:daysAgo(20),reportingPeriod:'2026-07',timeline:[{date:daysAgo(20),action:'PO created',by:'James Nkosi'},{date:daysAgo(5),action:'Service marked complete',by:'James Nkosi'}]},
+    {id:5,poNumber:'PO-2026-005',vendor:'SteelWorks Pty',description:'Structural steel fabrication — mezzanine floor extension',department:'Production',value:320000,owner:'Sarah van der Berg',serviceStatus:'Completed',completion:100,grStatus:'Posted',grRef:'GR-2026-0025',grDate:grDate8,invoiceStatus:'Received',invoiceNumber:'INV-SW-8890',invoiceAmount:320000,invoiceDate:grDate5,erpInvoiceRef:null,followUpCount:0,lastFollowUp:null,vendorFlagged:false,escalated:false,paidDate:null,expectedDate:'2026-08-10',quoteRef:'Q-SW-3301',lineItems:[],orderedQty:1,deliveryQtyReceived:1,erpGrMatched:true,erpInvoiceMatched:false,createdDate:daysAgo(40),reportingPeriod:'2026-08',timeline:[{date:daysAgo(40),action:'PO created',by:'Sarah van der Berg'},{date:daysAgo(10),action:'Service marked complete',by:'Sarah van der Berg'},{date:grDate8,action:'GR posted — GR-2026-0025',by:'Finance'},{date:grDate5,action:'Invoice received — INV-SW-8890',by:'Finance'}]},
+    {id:6,poNumber:'PO-2026-006',vendor:'LogiTrans',description:'Freight delivery — Q3 bulk material transport',department:'Logistics',value:67000,owner:'Peter Botha',serviceStatus:'In Progress',completion:30,grStatus:'Pending',grRef:null,grDate:null,invoiceStatus:'Required',invoiceNumber:null,invoiceAmount:null,invoiceDate:null,erpInvoiceRef:null,followUpCount:0,lastFollowUp:null,vendorFlagged:false,escalated:false,paidDate:null,expectedDate:'2026-09-30',quoteRef:'Q-LT-2200',lineItems:[],orderedQty:null,deliveryQtyReceived:null,erpGrMatched:false,erpInvoiceMatched:false,createdDate:daysAgo(15),reportingPeriod:'2026-08',timeline:[{date:daysAgo(15),action:'PO created',by:'Peter Botha'}]},
+    {id:7,poNumber:'PO-2026-007',vendor:'ElecFix Solutions',description:'Electrical panel upgrade — 4 distribution boards',department:'Maintenance',value:95000,owner:'Thabo Mokoena',serviceStatus:'Completed',completion:100,grStatus:'Posted',grRef:'GR-2026-0028',grDate:daysAgo(22),invoiceStatus:'Required',invoiceNumber:null,invoiceAmount:null,invoiceDate:null,erpInvoiceRef:null,followUpCount:3,lastFollowUp:daysAgo(5),vendorFlagged:true,escalated:true,paidDate:null,expectedDate:'2026-07-15',quoteRef:'Q-EF-0772',lineItems:[],orderedQty:4,deliveryQtyReceived:4,erpGrMatched:true,erpInvoiceMatched:false,createdDate:daysAgo(45),reportingPeriod:'2026-07',timeline:[{date:daysAgo(45),action:'PO created',by:'Thabo Mokoena'},{date:daysAgo(24),action:'Service marked complete',by:'Thabo Mokoena'},{date:daysAgo(22),action:'GR posted — GR-2026-0028',by:'Finance'},{date:daysAgo(14),action:'Vendor follow-up #1 sent',by:'Finance'},{date:daysAgo(9),action:'Vendor follow-up #2 sent',by:'Finance'},{date:daysAgo(5),action:'Vendor follow-up #3 sent — escalated to management',by:'Finance'}]},
+    {id:8,poNumber:'PO-2026-008',vendor:'SafetyFirst Supplies',description:'PPE bulk order — safety helmets, goggles, gloves',department:'Facilities',value:22000,owner:'James Nkosi',serviceStatus:'Completed',completion:100,grStatus:'Posted',grRef:'GR-2026-0030',grDate:daysAgo(20),invoiceStatus:'Paid',invoiceNumber:'INV-SF-2231',invoiceAmount:22000,invoiceDate:daysAgo(18),erpInvoiceRef:'ERP-INV-2026-0095',followUpCount:0,lastFollowUp:null,vendorFlagged:false,escalated:false,paidDate:daysAgo(5),expectedDate:'2026-07-10',quoteRef:'Q-SF-4410',lineItems:[],orderedQty:200,deliveryQtyReceived:200,erpGrMatched:true,erpInvoiceMatched:true,createdDate:daysAgo(35),reportingPeriod:'2026-07',timeline:[{date:daysAgo(35),action:'PO created',by:'James Nkosi'},{date:daysAgo(22),action:'Service marked complete',by:'James Nkosi'},{date:daysAgo(20),action:'GR posted — GR-2026-0030',by:'Finance'},{date:daysAgo(18),action:'Invoice received — INV-SF-2231',by:'Finance'},{date:daysAgo(12),action:'Invoice approved — ERP-INV-2026-0095',by:'Finance'},{date:daysAgo(5),action:'Marked as paid',by:'Finance'}]},
+    {id:9,poNumber:'PO-2026-009',vendor:'ChemLab Analytics',description:'Water testing kits — 10 units for quality control',department:'Production',value:15800,owner:'Peter Botha',serviceStatus:'In Progress',completion:80,grStatus:'Pending',grRef:null,grDate:null,invoiceStatus:'Required',invoiceNumber:null,invoiceAmount:null,invoiceDate:null,erpInvoiceRef:null,followUpCount:0,lastFollowUp:null,vendorFlagged:false,escalated:false,paidDate:null,expectedDate:'2026-08-20',quoteRef:null,lineItems:[],orderedQty:10,deliveryQtyReceived:null,erpGrMatched:false,erpInvoiceMatched:false,createdDate:daysAgo(12),reportingPeriod:'2026-08',timeline:[{date:daysAgo(12),action:'PO created',by:'Peter Botha'},{date:daysAgo(3),action:'Completion updated to 80%',by:'Peter Botha'}]},
+    {id:10,poNumber:'PO-2026-010',vendor:'AirCool HVAC',description:'Air conditioning repair — admin block compressors',department:'Facilities',value:45000,owner:'James Nkosi',serviceStatus:'Completed',completion:100,grStatus:'Pending',grRef:null,grDate:null,invoiceStatus:'Required',invoiceNumber:null,invoiceAmount:null,invoiceDate:null,erpInvoiceRef:null,followUpCount:0,lastFollowUp:null,vendorFlagged:false,escalated:false,paidDate:null,expectedDate:'2026-08-05',quoteRef:'Q-AC-1900',lineItems:[],orderedQty:null,deliveryQtyReceived:null,erpGrMatched:false,erpInvoiceMatched:false,createdDate:daysAgo(18),reportingPeriod:'2026-08',timeline:[{date:daysAgo(18),action:'PO created',by:'James Nkosi'},{date:daysAgo(2),action:'Service marked complete',by:'James Nkosi'}]},
+    {id:11,poNumber:'PO-2026-011',vendor:'DataCable Networks',description:'Network cabling installation — server room upgrade',department:'IT',value:73500,owner:'Sarah van der Berg',serviceStatus:'Completed',completion:100,grStatus:'Posted',grRef:'GR-2026-0035',grDate:grDate3,invoiceStatus:'Received',invoiceNumber:'INV-DCN-1102',invoiceAmount:73500,invoiceDate:grDate1,erpInvoiceRef:null,followUpCount:0,lastFollowUp:null,vendorFlagged:false,escalated:false,paidDate:null,expectedDate:'2026-08-08',quoteRef:'Q-DCN-0550',lineItems:[],orderedQty:null,deliveryQtyReceived:null,erpGrMatched:true,erpInvoiceMatched:false,createdDate:daysAgo(22),reportingPeriod:'2026-08',timeline:[{date:daysAgo(22),action:'PO created',by:'Sarah van der Berg'},{date:daysAgo(5),action:'Service marked complete',by:'Sarah van der Berg'},{date:grDate3,action:'GR posted — GR-2026-0035',by:'Finance'},{date:grDate1,action:'Invoice received — INV-DCN-1102',by:'Finance'}]},
+    {id:12,poNumber:'PO-2026-012',vendor:'WeldMaster Services',description:'Welding rods bulk supply — 500 units E7018',department:'Production',value:8900,owner:'Peter Botha',serviceStatus:'Completed',completion:100,grStatus:'Posted',grRef:'GR-2026-0038',grDate:daysAgo(25),invoiceStatus:'Paid',invoiceNumber:'INV-WM-0098',invoiceAmount:8900,invoiceDate:daysAgo(22),erpInvoiceRef:'ERP-INV-2026-0102',followUpCount:0,lastFollowUp:null,vendorFlagged:false,escalated:false,paidDate:daysAgo(10),expectedDate:'2026-07-05',quoteRef:'Q-WM-3321',lineItems:[],orderedQty:500,deliveryQtyReceived:500,erpGrMatched:false,erpInvoiceMatched:true,createdDate:daysAgo(40),reportingPeriod:'2026-07',timeline:[{date:daysAgo(40),action:'PO created',by:'Peter Botha'},{date:daysAgo(28),action:'Service marked complete',by:'Peter Botha'},{date:daysAgo(25),action:'GR posted — GR-2026-0038',by:'Finance'},{date:daysAgo(22),action:'Invoice received — INV-WM-0098',by:'Finance'},{date:daysAgo(15),action:'Invoice approved — ERP-INV-2026-0102',by:'Finance'},{date:daysAgo(10),action:'Marked as paid',by:'Finance'}]}
+  ];
+  state.vendors={
+    'NCC Engineering':{email:'accounts@ncceng.co.za',flagged:false},
+    'DrillCo SA':{email:'invoices@drillco.co.za',flagged:false},
+    'TechParts Distributors':{email:'billing@techparts.co.za',flagged:false},
+    'CleanPro Services':{email:'info@cleanpro.co.za',flagged:false},
+    'SteelWorks Pty':{email:'finance@steelworks.co.za',flagged:false},
+    'LogiTrans':{email:'accounts@logitrans.co.za',flagged:false},
+    'ElecFix Solutions':{email:'invoicing@elecfix.co.za',flagged:true},
+    'SafetyFirst Supplies':{email:'sales@safetyfirst.co.za',flagged:false},
+    'ChemLab Analytics':{email:'admin@chemlab.co.za',flagged:false},
+    'AirCool HVAC':{email:'accounts@aircool.co.za',flagged:false},
+    'DataCable Networks':{email:'billing@datacable.co.za',flagged:false},
+    'WeldMaster Services':{email:'info@weldmaster.co.za',flagged:false}
+  };
+  saveData();
+}
+
+// ===== AUTH =====
+// REPLACE WITH THIS:
+async function doLogin(){
+  const email = $('loginEmail').value.trim();
+  const password = $('loginPassword').value;
+  if(!email || !password){
+    $('loginError').textContent='Please enter email and password';
+    $('loginError').classList.remove('hidden');
+    return;
+  }
+  try {
+    const res = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({email, password})
+    });
+    if(!res.ok) throw new Error('Invalid credentials');
+    const {token, user} = await res.json();
+    window.__authToken = token; // store in memory only, NOT localStorage
+    state.user = user;          // role/name/dept comes from server
+    $('loginScreen').classList.add('hidden');
+    $('app').classList.remove('hidden');
+    initApp();
+  } catch(e) {
+    $('loginError').textContent = e.message;
+    $('loginError').classList.remove('hidden');
+  }
+}
+function doLogout(){
+  sessionStorage.removeItem('springbok_user');
+  state.user=null;
+  $('app').classList.add('hidden');
+  $('loginScreen').classList.remove('hidden');
+}
+function restoreSession(){
+  try{const u=sessionStorage.getItem('springbok_user');if(u){state.user=JSON.parse(u);$('loginScreen').classList.add('hidden');$('app').classList.remove('hidden');initApp();return true}}catch(e){}
+  return false;
+}
+
+// ===== PERMISSIONS =====
+function can(action,rec){
+  const r=state.user?.role,n=state.user?.name;
+  if(!r)return false;
+  switch(action){
+    case 'create_po':return r==='po_owner';
+    case 'update_completion':return r==='po_owner'&&(!rec||rec.owner===n);
+    case 'mark_complete':return r==='po_owner'&&(!rec||rec.owner===n);
+    case 'see_gr_controls':return r==='finance'||r==='senior_finance';
+    case 'post_gr':return(r==='finance'||r==='senior_finance')&&(!rec||rec.owner!==n);
+    case 'see_invoice_amounts':return r==='finance'||r==='senior_finance';
+    case 'see_invoice_controls':return r==='finance'||r==='senior_finance';
+    case 'record_invoice':return(r==='finance'||r==='senior_finance')&&(!rec||rec.owner!==n);
+    case 'approve_invoice':
+      if(r!=='finance'&&r!=='senior_finance')return false;
+      if(!rec)return true;
+      if(rec.value>50000)return r==='senior_finance';
+      return rec.owner!==n;
+    case 'mark_paid':return(r==='finance'||r==='senior_finance')&&(!rec||rec.owner!==n);
+    case 'flag_vendor':return r==='finance'||r==='senior_finance';
+    case 'send_alert':return r==='finance'||r==='senior_finance';
+    case 'see_reconciliation':return r==='finance'||r==='senior_finance';
+    case 'see_vendors':return r==='finance'||r==='senior_finance';
+    case 'see_invoice_control':return r==='finance'||r==='senior_finance';
+    case 'see_gr_queue':return r==='finance'||r==='senior_finance';
+    case 'see_forecast':return r==='finance'||r==='senior_finance';
+    case 'see_settings':return r==='finance'||r==='senior_finance';
+    case 'export_csv':return r==='finance'||r==='senior_finance';
+    case 'see_value':return r!=='receiver';
+    case 'see_quantity':return r!=='receiver';
+    case 'enter_delivery_qty':return r==='receiver';
+    default:return true;
+  }
+}
+
+// ===== INIT APP =====
+function initApp(){
+  setupBanner();
+  setupSidebar();
+  // Receiver goes straight to deliveries
+  if(state.user.role==='receiver'){state.view='deliveries';}
+  else{state.view='dashboard';}
+  render();
+}
+function setupBanner(){
+  const r=state.user.role;
+  const colors={po_owner:'bg-emerald-50 text-emerald-800 border-emerald-200',receiver:'bg-gray-100 text-gray-700 border-gray-200',finance:'bg-blue-50 text-blue-800 border-blue-200',senior_finance:'bg-purple-50 text-purple-800 border-purple-200'};
+  $('roleBanner').className=`h-11 flex items-center justify-between px-4 text-xs font-600 border-b ${colors[r]||''}`;
+  $('bannerText').innerHTML=`<i class="fas fa-user-circle mr-1"></i> Signed in as <strong>${state.user.name}</strong> &middot; ${ROLE_LABELS[r]}`;
+}
+function setupSidebar(){
+  const r=state.user.role;
+  let items=[];
+  if(r==='receiver'){
+    items=[{id:'deliveries',icon:'fa-truck',label:'Deliveries Awaiting Count'}];
+  }else{
+    items.push({id:'dashboard',icon:'fa-gauge-high',label:'Control Dashboard'});
+    items.push({id:'commitments',icon:'fa-file-invoice',label:'Commitments'});
+    if(can('see_gr_queue'))items.push({id:'grqueue',icon:'fa-clipboard-check',label:'Service & GR Queue',badge:()=>state.records.filter(x=>x.serviceStatus==='Completed'&&x.grStatus==='Pending').length});
+    if(can('see_invoice_control'))items.push({id:'invoicecontrol',icon:'fa-file-invoice-dollar',label:'Invoice Control',badge:()=>state.records.filter(x=>x.serviceStatus==='Completed'&&x.invoiceStatus==='Required').length});
+    if(can('see_forecast'))items.push({id:'forecast',icon:'fa-chart-line',label:'Expense Forecast'});
+    if(can('see_vendors'))items.push({id:'vendors',icon:'fa-building',label:'Vendors'});
+    if(can('see_reconciliation'))items.push({id:'reconciliation',icon:'fa-arrows-rotate',label:'ERP Reconciliation'});
+    if(can('see_settings'))items.push({id:'settings',icon:'fa-gear',label:'Settings'});
+  }
+  let html='';
+  items.forEach(it=>{
+    const b=it.badge?it.badge():0;
+    const active=state.view===it.id?'bg-sb-blue/10 text-sb-blue font-700':'text-gray-600 hover:bg-gray-100';
+    html+=`<button onclick="navigate('${it.id}')" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition ${active} relative">
+      <i class="fas ${it.icon} w-5 text-center"></i><span>${it.label}</span>${b?`<span class="badge-count">${b}</span>`:''}
+    </button>`;
+  });
+  $('sidebarNav').innerHTML=html;
+}
+function navigate(view){
+  state.view=view;
+  state.filters={search:'',dept:'',period:'',invoiceFilter:'all'};
+  setupSidebar();
+  render();
+  // Close sidebar on mobile
+  if(window.innerWidth<768)$('sidebar').classList.remove('open');
+}
+function toggleSidebar(){$('sidebar').classList.toggle('open')}
+
+// ===== FILTERED RECORDS =====
+function getRecords(){
+  let recs=[...state.records];
+  const r=state.user.role;
+  // PO Owner sees only their department
+  if(r==='po_owner')recs=recs.filter(x=>x.department===state.user.dept);
+  // Receiver: strip value and quantity data before returning
+  if(r==='receiver'){
+    recs=recs.filter(x=>x.orderedQty!=null&&x.deliveryQtyReceived==null);
+    return recs.map(x=>({...x,value:undefined,invoiceAmount:undefined,orderedQty:undefined}));
+  }
+  // Apply search
+  if(state.filters.search){
+    const s=state.filters.search.toLowerCase();
+    recs=recs.filter(x=>x.poNumber.toLowerCase().includes(s)||x.vendor.toLowerCase().includes(s)||x.description.toLowerCase().includes(s)||x.owner.toLowerCase().includes(s));
+  }
+  // Apply department filter
+  if(state.filters.dept)recs=recs.filter(x=>x.department===state.filters.dept);
+  // Apply period filter
+  if(state.filters.period)recs=recs.filter(x=>x.reportingPeriod===state.filters.period);
+  return recs;
+}
+function fmtCur(v){if(v==null)return'—';return'R '+Number(v).toLocaleString('en-ZA',{minimumFractionDigits:0,maximumFractionDigits:0})}
+
+// ===== RENDER =====
+function render(){
+  const v=state.view;
+  const renderers={dashboard:renderDashboard,commitments:renderCommitments,grqueue:renderGrQueue,invoicecontrol:renderInvoiceControl,forecast:renderForecast,vendors:renderVendors,reconciliation:renderReconciliation,deliveries:renderDeliveries,settings:renderSettings};
+  (renderers[v]||renderDashboard)();
+}
+
+// ===== DASHBOARD =====
+function renderDashboard(){
+  const r=state.user.role;
+  let recs=[...state.records];
+  if(r==='po_owner')recs=recs.filter(x=>x.department===state.user.dept);
+  const totalCommitted=recs.reduce((s,x)=>s+x.value,0);
+  const workCompleted=recs.filter(x=>x.serviceStatus==='Completed').reduce((s,x)=>s+x.value,0);
+  const missingInvoices=recs.filter(x=>x.serviceStatus==='Completed'&&x.invoiceStatus==='Required').length;
+  const highRisk=recs.filter(x=>x.escalated||x.vendorFlagged).length;
+  // Pending alerts (Finance/Senior only)
+  const alertRecs=can('send_alert')?getAlertDueRecords(recs):[];
+  // High-value approvals (Senior Finance only)
+  const hvApprovals=r==='senior_finance'?recs.filter(x=>x.invoiceStatus==='Received'&&x.value>50000):[];
+  // Priority exceptions
+  const exceptions=[];
+  recs.filter(x=>x.serviceStatus==='Completed'&&x.grStatus==='Pending').forEach(x=>exceptions.push({rec:x,priority:'high',label:'GR required',icon:'fa-clipboard-check',color:'text-sb-orange'}));
+  recs.filter(x=>x.serviceStatus==='Completed'&&x.grStatus==='Posted'&&x.invoiceStatus==='Required'&&!x.escalated).forEach(x=>exceptions.push({rec:x,priority:'high',label:'Invoice missing',icon:'fa-file-invoice-dollar',color:'text-sb-red'}));
+  recs.filter(x=>x.escalated).forEach(x=>exceptions.push({rec:x,priority:'critical',label:'Escalated — vendor follow-up exhausted',icon:'fa-exclamation-triangle',color:'text-sb-red'}));
+  if(r==='senior_finance')recs.filter(x=>x.invoiceStatus==='Received'&&x.value>50000).forEach(x=>exceptions.push({rec:x,priority:'high',label:'High-value invoice needs approval',icon:'fa-coins',color:'text-sb-yellow'}));
+  // Process flow counts
+  const flowCounts=[
+    recs.length,
+    recs.filter(x=>x.serviceStatus==='Completed').length,
+    recs.filter(x=>x.grStatus==='Posted').length,
+    recs.filter(x=>['Received','Approved','Paid'].includes(x.invoiceStatus)).length,
+    recs.filter(x=>['Approved','Paid'].includes(x.invoiceStatus)).length,
+    recs.filter(x=>x.invoiceStatus==='Paid'&&x.erpGrMatched&&x.erpInvoiceMatched).length
+  ];
+
+  let html=`<h2 class="text-xl font-800 text-sb-dark mb-1">Control Dashboard</h2>
+  <p class="text-sm text-gray-500 mb-6">Real-time overview of purchase commitments and control status</p>
+  <!-- KPI Cards -->
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    ${kpiCard('Total Committed',fmtCur(totalCommitted),'fa-file-invoice','bg-sb-blue/10 text-sb-blue')}
+    ${kpiCard('Work Completed',fmtCur(workCompleted),'fa-check-circle','bg-sb-green/10 text-sb-green')}
+    ${kpiCard('Missing Invoices',missingInvoices,'fa-file-invoice-dollar','bg-sb-red/10 text-sb-red')}
+    ${kpiCard('High Risk',highRisk,'fa-exclamation-triangle','bg-sb-orange/10 text-sb-orange')}
+  </div>`;
+  // Pending vendor alerts
+  if(can('send_alert')&&alertRecs.length){
+    html+=`<div class="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="font-700 text-amber-900 text-sm"><i class="fas fa-bell mr-2"></i>Pending Vendor Alerts (${alertRecs.length})</h3>
+        <button onclick="sendAllAlerts()" class="text-xs bg-amber-600 text-white px-3 py-1.5 rounded-lg hover:bg-amber-700 transition font-600">Send all due alerts</button>
+      </div>
+      <div class="space-y-2">${alertRecs.map(x=>`<div class="flex items-center justify-between bg-white rounded-lg px-3 py-2">
+        <div class="text-sm"><span class="font-600">${x.poNumber}</span> — ${x.vendor} <span class="text-gray-400 text-xs">(${daysBetween(x.grDate,todayStr())} days since GR)</span></div>
+        <button onclick="openAlertModal(${x.id})" class="text-xs bg-amber-500 text-white px-3 py-1 rounded hover:bg-amber-600 transition font-600">Send alert</button>
+      </div>`).join('')}</div>
+    </div>`;
+  }
+  // High-value approvals
+  if(r==='senior_finance'&&hvApprovals.length){
+    html+=`<div class="bg-purple-50 border border-purple-200 rounded-xl p-4 mb-6">
+      <h3 class="font-700 text-purple-900 text-sm mb-3"><i class="fas fa-coins mr-2"></i>High-Value Approvals (${hvApprovals.length})</h3>
+      <div class="space-y-2">${hvApprovals.map(x=>`<div class="flex items-center justify-between bg-white rounded-lg px-3 py-2 cursor-pointer hover:bg-purple-50 transition" onclick="openDrawer(${x.id})">
+        <div class="text-sm"><span class="font-600">${x.poNumber}</span> — ${x.vendor} — <span class="font-700 text-purple-700">${fmtCur(x.value)}</span></div>
+        <i class="fas fa-chevron-right text-purple-400 text-xs"></i>
+      </div>`).join('')}</div>
+    </div>`;
+  }
+  // Priority Exceptions
+  html+=`<div class="bg-white rounded-xl border border-gray-200 p-4 mb-6">
+    <h3 class="font-700 text-sb-dark text-sm mb-3"><i class="fas fa-exclamation-circle mr-2 text-sb-orange"></i>Priority Exceptions (${exceptions.length})</h3>`;
+  if(exceptions.length){
+    html+=`<div class="space-y-2">${exceptions.slice(0,8).map(e=>`<div class="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-gray-50 cursor-pointer transition" onclick="openDrawer(${e.rec.id})">
+      <div class="flex items-center gap-3"><i class="fas ${e.icon} ${e.color}"></i><div class="text-sm"><span class="font-600">${e.rec.poNumber}</span> — ${e.rec.vendor}</div></div>
+      <span class="text-xs font-600 px-2 py-0.5 rounded-full ${e.priority==='critical'?'bg-red-100 text-red-700':'bg-amber-100 text-amber-700'}">${e.label}</span>
+    </div>`).join('')}</div>`;
+  }else{html+=`<p class="text-sm text-gray-400">No exceptions — everything is on track.</p>`}
+  html+=`</div>`;
+  // Process Flow Diagram
+  html+=`<div class="bg-white rounded-xl border border-gray-200 p-6">
+    <h3 class="font-700 text-sb-dark text-sm mb-6"><i class="fas fa-diagram-project mr-2 text-sb-blue"></i>Control Flow</h3>
+    <div class="flex items-start overflow-x-auto pb-2">`;
+  const flowColors=['#0056a3','#2563eb','#37b34a','#ca8a04','#ea580c','#7c3aed'];
+  STAGES.forEach((s,i)=>{
+    html+=`<div class="flow-node">
+      <div class="flow-circle" style="background:${flowColors[i]}">${flowCounts[i]}</div>
+      <div class="text-xs font-600 text-gray-700 mt-2 text-center max-w-[100px]">${s}</div>
+    </div>`;
+    if(i<STAGES.length-1)html+=`<div class="flow-arrow"></div>`;
+  });
+  html+=`</div></div>`;
+  $('mainContent').innerHTML=html;
+}
+function kpiCard(label,value,icon,colorClass){
+  return`<div class="bg-white rounded-xl border border-gray-200 p-4">
+    <div class="flex items-center justify-between mb-2">
+      <span class="text-xs font-600 text-gray-500 uppercase tracking-wider">${label}</span>
+      <div class="w-9 h-9 rounded-lg ${colorClass} flex items-center justify-center"><i class="fas ${icon} text-sm"></i></div>
+    </div>
+    <div class="text-xl font-800 text-sb-dark">${value}</div>
+  </div>`;
+}
+
+// ===== COMMITMENTS =====
+function renderCommitments(){
+  const recs=getRecords();
+  const showValue=can('see_value');
+  let html=`<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+    <div><h2 class="text-xl font-800 text-sb-dark">Commitments</h2><p class="text-sm text-gray-500">Full register of all purchase orders</p></div>
+    <div class="flex items-center gap-2">`;
+  if(can('create_po'))html+=`<button onclick="openNewPO()" class="bg-sb-green text-white px-4 py-2 rounded-lg text-sm font-600 hover:bg-sb-green/90 transition"><i class="fas fa-plus mr-1"></i> New Record</button>`;
+  if(can('export_csv'))html+=`<button onclick="exportCSV('commitments')" class="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm font-600 hover:bg-gray-50 transition"><i class="fas fa-download mr-1"></i> Export CSV</button>`;
+  html+=`</div></div>
+  <!-- Filters -->
+  <div class="flex flex-wrap gap-3 mb-4">
+    <div class="relative flex-1 min-w-[200px]"><i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
+    <input type="text" placeholder="Search PO, supplier, owner..." value="${state.filters.search}" oninput="state.filters.search=this.value;renderCommitments()" class="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-sb-blue focus:border-sb-blue outline-none"></div>
+    <select onchange="state.filters.dept=this.value;renderCommitments()" class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-sb-blue outline-none">
+      <option value="">All Departments</option>${DEPARTMENTS.map(d=>`<option value="${d}" ${state.filters.dept===d?'selected':''}>${d}</option>`).join('')}
+    </select>
+    <select onchange="state.filters.period=this.value;renderCommitments()" class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-sb-blue outline-none">
+      <option value="">All Periods</option>
+      <option value="2026-07" ${state.filters.period==='2026-07'?'selected':''}>Jul 2026</option>
+      <option value="2026-08" ${state.filters.period==='2026-08'?'selected':''}>Aug 2026</option>
+      <option value="2026-09" ${state.filters.period==='2026-09'?'selected':''}>Sep 2026</option>
+    </select>
+  </div>
+  <div class="bg-white rounded-xl border border-gray-200 overflow-x-auto">
+  <table><thead><tr>
+    <th>PO Number</th><th>Vendor</th><th>Description</th><th>Department</th>
+    ${showValue?'<th>Value</th>':''}
+    <th>Completion</th><th>Risk</th>
+  </tr></thead><tbody>`;
+  if(!recs.length)html+=`<tr><td colspan="7" class="text-center text-gray-400 py-8">No records found</td></tr>`;
+  recs.forEach(r=>{
+    const riskClass=r.escalated?'bg-red-500':r.vendorFlagged?'bg-sb-orange':'bg-sb-green';
+    const pctColor=r.completion===100?'bg-sb-green':r.completion>=50?'bg-sb-blue':'bg-sb-yellow';
+    html+=`<tr class="cursor-pointer" onclick="openDrawer(${r.id})">
+      <td class="font-600 text-sb-blue">${r.poNumber}</td>
+      <td>${r.vendor}</td>
+      <td class="max-w-[200px] truncate">${r.description}</td>
+      <td><span class="text-xs font-600 px-2 py-0.5 rounded-full bg-gray-100 text-gray-700">${r.department}</span></td>
+      ${showValue?`<td class="font-600">${fmtCur(r.value)}</td>`:''}
+      <td><div class="flex items-center gap-2"><div class="progress-bar w-20"><div class="progress-fill ${pctColor}" style="width:${r.completion}%"></div></div><span class="text-xs font-600">${r.completion}%</span></div></td>
+      <td><span class="risk-dot ${riskClass}"></span></td>
+    </tr>`;
+  });
+  html+=`</tbody></table></div>`;
+  $('mainContent').innerHTML=html;
+}
+
+// ===== GR QUEUE =====
+function renderGrQueue(){
+  const recs=state.records.filter(x=>x.serviceStatus==='Completed'&&x.grStatus==='Pending');
+  let html=`<div class="mb-4"><h2 class="text-xl font-800 text-sb-dark">Service & GR Queue</h2><p class="text-sm text-gray-500">Work completed — awaiting Goods Receipt posting in ERP</p></div>
+  <div class="bg-white rounded-xl border border-gray-200 overflow-x-auto">
+  <table><thead><tr><th>PO Number</th><th>Vendor</th><th>Description</th><th>Department</th><th>Value</th><th>Completed</th><th>Action</th></tr></thead><tbody>`;
+  if(!recs.length)html+=`<tr><td colspan="7" class="text-center text-gray-400 py-8">No items in queue</td></tr>`;
+  recs.forEach(r=>{
+    html+=`<tr>
+      <td class="font-600 text-sb-blue cursor-pointer" onclick="openDrawer(${r.id})">${r.poNumber}</td>
+      <td>${r.vendor}</td><td class="max-w-[200px] truncate">${r.description}</td>
+      <td><span class="text-xs font-600 px-2 py-0.5 rounded-full bg-gray-100 text-gray-700">${r.department}</span></td>
+      <td class="font-600">${fmtCur(r.value)}</td>
+      <td class="text-xs">${fmtDate(r.timeline.find(t=>t.action.includes('complete'))?.date)}</td>
+      <td>${can('post_gr',r)?`<button onclick="openGRModal(${r.id})" class="bg-sb-blue text-white px-3 py-1.5 rounded-lg text-xs font-600 hover:bg-sb-blue/90 transition">Record ERP GR</button>`:'<span class="text-xs text-gray-400">Self-owned</span>'}</td>
+    </tr>`;
+  });
+  html+=`</tbody></table></div>`;
+  $('mainContent').innerHTML=html;
+}
+
+// ===== INVOICE CONTROL =====
+function renderInvoiceControl(){
+  let recs=state.records.filter(x=>x.serviceStatus==='Completed');
+  const f=state.filters.invoiceFilter||'all';
+  if(f==='required')recs=recs.filter(x=>x.invoiceStatus==='Required');
+  else if(f==='received')recs=recs.filter(x=>x.invoiceStatus==='Received');
+  else if(f==='approved')recs=recs.filter(x=>x.invoiceStatus==='Approved');
+  else if(f==='flagged')recs=recs.filter(x=>x.vendorFlagged||x.escalated);
+  const missingCount=state.records.filter(x=>x.serviceStatus==='Completed'&&x.invoiceStatus==='Required').length;
+  let html=`<div class="mb-4"><h2 class="text-xl font-800 text-sb-dark">Invoice Control</h2><p class="text-sm text-gray-500">Track and control supplier invoices</p></div>
+  <div class="flex flex-wrap gap-2 mb-4">
+    ${['all','required','received','approved','flagged'].map(v=>`<button onclick="state.filters.invoiceFilter='${v}';renderInvoiceControl()" class="px-3 py-1.5 rounded-lg text-xs font-600 transition ${f===v?'bg-sb-blue text-white':'bg-white border border-gray-300 text-gray-600 hover:bg-gray-50'}">${v==='all'?'All':v.charAt(0).toUpperCase()+v.slice(1)}${v==='required'&&missingCount?` (${missingCount})`:''}</button>`).join('')}
+  </div>
+  <div class="bg-white rounded-xl border border-gray-200 overflow-x-auto">
+  <table><thead><tr><th>PO Number</th><th>Vendor</th><th>Description</th><th>Invoice Status</th><th>Invoice #</th><th>Amount</th><th>Follow-ups</th><th>Actions</th></tr></thead><tbody>`;
+  if(!recs.length)html+=`<tr><td colspan="8" class="text-center text-gray-400 py-8">No records match this filter</td></tr>`;
+  recs.forEach(r=>{
+    const isMissing=r.invoiceStatus==='Required';
+    const rowClass=isMissing?'bg-red-50':'';
+    const statusColors={Required:'bg-red-100 text-red-700',Received:'bg-amber-100 text-amber-700',Approved:'bg-blue-100 text-blue-700',Paid:'bg-green-100 text-green-700'};
+    let actions='';
+    if(can('record_invoice',r)&&isMissing)actions+=`<button onclick="openInvoiceModal(${r.id})" class="bg-sb-blue text-white px-2.5 py-1 rounded text-xs font-600 hover:bg-sb-blue/90 transition mr-1">Record Invoice</button>`;
+    if(can('approve_invoice',r)&&r.invoiceStatus==='Received')actions+=`<button onclick="doApproveInvoice(${r.id})" class="bg-sb-green text-white px-2.5 py-1 rounded text-xs font-600 hover:bg-sb-green/90 transition mr-1">Approve</button>`;
+    if(can('mark_paid',r)&&r.invoiceStatus==='Approved')actions+=`<button onclick="doMarkPaid(${r.id})" class="bg-gray-800 text-white px-2.5 py-1 rounded text-xs font-600 hover:bg-gray-700 transition mr-1">Mark Paid</button>`;
+    if(can('flag_vendor',r)&&isMissing)actions+=`<button onclick="doFlagVendor(${r.id})" class="bg-sb-orange text-white px-2.5 py-1 rounded text-xs font-600 hover:bg-sb-orange/90 transition">Flag</button>`;
+    html+=`<tr class="${rowClass} cursor-pointer" onclick="openDrawer(${r.id})">
+      <td class="font-600 text-sb-blue">${r.poNumber}</td>
+      <td>${r.vendor}</td><td class="max-w-[180px] truncate">${r.description}</td>
+      <td><span class="text-xs font-600 px-2 py-0.5 rounded-full ${statusColors[r.invoiceStatus]||''}">${r.invoiceStatus}${r.escalated?' — Escalated':''}</span></td>
+      <td class="text-xs">${r.invoiceNumber||'—'}</td>
+      <td class="font-600">${can('see_invoice_amounts')?fmtCur(r.invoiceAmount):'—'}</td>
+      <td class="text-xs">${r.followUpCount>0?r.followUpCount:'—'}</td>
+      <td onclick="event.stopPropagation()">${actions}</td>
+    </tr>`;
+  });
+  html+=`</tbody></table></div>`;
+  $('mainContent').innerHTML=html;
+}
+
+// ===== EXPENSE FORECAST =====
+function renderForecast(){
+  const months=['2026-07','2026-08','2026-09','2026-10'];
+  const monthLabels=['Jul 2026','Aug 2026','Sep 2026','Oct 2026'];
+  const stages=['Committed','Work Done','Invoiced','Paid'];
+  let html=`<div class="mb-4"><h2 class="text-xl font-800 text-sb-dark">Expense Forecast</h2><p class="text-sm text-gray-500">Predicted cash outflows by month and department</p></div>
+  <div class="bg-white rounded-xl border border-gray-200 overflow-x-auto">
+  <table><thead><tr><th>Department / Stage</th>${monthLabels.map(m=>`<th class="text-right">${m}</th>`).join('')}<th class="text-right">Total</th></tr></thead><tbody>`;
+  let grandTotal={};
+  months.forEach(m=>grandTotal[m]=0);
+  DEPARTMENTS.forEach(dept=>{
+    html+=`<tr class="bg-gray-50"><td colspan="6" class="font-700 text-sm text-sb-dark">${dept}</td></tr>`;
+    stages.forEach(stage=>{
+      html+=`<tr><td class="pl-6 text-xs text-gray-600">${stage}</td>`;
+      let rowTotal=0;
+      months.forEach(m=>{
+        let val=0;
+        const recs=state.records.filter(x=>x.department===dept&&x.reportingPeriod===m);
+        if(stage==='Committed')val=recs.reduce((s,x)=>s+x.value,0);
+        else if(stage==='Work Done')val=recs.filter(x=>x.serviceStatus==='Completed').reduce((s,x)=>s+x.value,0);
+        else if(stage==='Invoiced')val=recs.filter(x=>['Received','Approved','Paid'].includes(x.invoiceStatus)).reduce((s,x)=>s+x.value,0);
+        else if(stage==='Paid')val=recs.filter(x=>x.invoiceStatus==='Paid').reduce((s,x)=>s+x.value,0);
+        rowTotal+=val;grandTotal[m]+=val;
+        html+=`<td class="text-right text-sm font-600">${val?fmtCur(val):'—'}</td>`;
+      });
+      html+=`<td class="text-right text-sm font-700">${rowTotal?fmtCur(rowTotal):'—'}</td></tr>`;
+    });
+  });
+  html+=`<tr class="bg-sb-blue/5 font-800"><td>Grand Total</td>`;
+  let gt=0;months.forEach(m=>{gt+=grandTotal[m];html+=`<td class="text-right text-sm">${grandTotal[m]?fmtCur(grandTotal[m]):'—'}</td>`});
+  html+=`<td class="text-right text-sm">${gt?fmtCur(gt):'—'}</td></tr>`;
+  html+=`</tbody></table></div>`;
+  $('mainContent').innerHTML=html;
+}
+
+// ===== VENDORS =====
+function renderVendors(){
+  const vendorMap={};
+  state.records.forEach(r=>{
+    if(!vendorMap[r.vendor])vendorMap[r.vendor]={totalValue:0,open:0,missingInv:0,flagged:false};
+    vendorMap[r.vendor].totalValue+=r.value;
+    if(r.invoiceStatus!=='Paid')vendorMap[r.vendor].open++;
+    if(r.serviceStatus==='Completed'&&r.invoiceStatus==='Required')vendorMap[r.vendor].missingInv++;
+    if(r.vendorFlagged||r.escalated)vendorMap[r.vendor].flagged=true;
+  });
+  let html=`<div class="mb-4"><h2 class="text-xl font-800 text-sb-dark">Vendors</h2><p class="text-sm text-gray-500">Supplier overview and status</p></div>
+  <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">`;
+  Object.entries(vendorMap).sort((a,b)=>b[1].totalValue-a[1].totalValue).forEach(([name,v])=>{
+    const ve=state.vendors[name]||{email:'',flagged:false};
+    const borderClass=v.flagged?'border-red-300 bg-red-50/30':'border-gray-200';
+    html+=`<div class="bg-white rounded-xl border ${borderClass} p-4">
+      <div class="flex items-start justify-between mb-3">
+        <div><h3 class="font-700 text-sm text-sb-dark">${name}</h3><p class="text-xs text-gray-400">${ve.email||'No email on file'}</p></div>
+        ${v.flagged?'<span class="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-600">Flagged</span>':''}
+      </div>
+      <div class="grid grid-cols-3 gap-3 text-center">
+        <div><div class="text-lg font-800 text-sb-dark">${fmtCur(v.totalValue)}</div><div class="text-xs text-gray-500">Total Value</div></div>
+        <div><div class="text-lg font-800 text-sb-blue">${v.open}</div><div class="text-xs text-gray-500">Open</div></div>
+        <div><div class="text-lg font-800 ${v.missingInv?'text-sb-red':'text-sb-green'}">${v.missingInv}</div><div class="text-xs text-gray-500">Missing Inv.</div></div>
+      </div>
+      <div class="mt-3 pt-3 border-t border-gray-100 flex justify-end">
+        <button onclick="openVendorEditModal('${name.replace(/'/g,"\\'")}')" class="text-xs text-sb-blue font-600 hover:underline"><i class="fas fa-pen mr-1"></i>Edit email</button>
+      </div>
+    </div>`;
+  });
+  html+=`</div>`;
+  $('mainContent').innerHTML=html;
+}
+
+// ===== ERP RECONCILIATION =====
+function renderReconciliation(){
+  const recs=state.records.filter(x=>x.grStatus==='Posted'||['Received','Approved','Paid'].includes(x.invoiceStatus));
+  let html=`<div class="mb-4"><h2 class="text-xl font-800 text-sb-dark">ERP Reconciliation</h2><p class="text-sm text-gray-500">Comparing portal records against the accounting system</p></div>
+  <div class="bg-white rounded-xl border border-gray-200 overflow-x-auto">
+  <table><thead><tr><th>PO Number</th><th>Vendor</th><th>GR Reference</th><th>GR Match</th><th>Invoice Reference</th><th>Inv. Match</th><th>Status</th></tr></thead><tbody>`;
+  if(!recs.length)html+=`<tr><td colspan="7" class="text-center text-gray-400 py-8">No records to reconcile</td></tr>`;
+  recs.forEach(r=>{
+    const grOk=r.erpGrMatched;
+    const invOk=r.erpInvoiceMatched;
+    const bothOk=grOk&&invOk;
+    const hasGr=r.grRef!=null;
+    const hasInv=r.erpInvoiceRef!=null;
+    let status,statusClass;
+    if(bothOk){status='Matched';statusClass='bg-green-100 text-green-700'}
+    else if(!hasGr&&!hasInv){status='Pending';statusClass='bg-gray-100 text-gray-600'}
+    else{status='Action Required';statusClass='bg-red-100 text-red-700'}
+    html+=`<tr class="cursor-pointer" onclick="openDrawer(${r.id})">
+      <td class="font-600 text-sb-blue">${r.poNumber}</td>
+      <td>${r.vendor}</td>
+      <td class="text-xs font-mono">${r.grRef||'—'}</td>
+      <td>${hasGr?`<span class="text-xs font-600 ${grOk?'text-sb-green':'text-sb-red'}"><i class="fas ${grOk?'fa-check-circle':'fa-times-circle'} mr-1"></i>${grOk?'Matched':'Mismatch'}</span>`:'<span class="text-xs text-gray-400">N/A</span>'}</td>
+      <td class="text-xs font-mono">${r.erpInvoiceRef||'—'}</td>
+      <td>${hasInv?`<span class="text-xs font-600 ${invOk?'text-sb-green':'text-sb-red'}"><i class="fas ${invOk?'fa-check-circle':'fa-times-circle'} mr-1"></i>${invOk?'Matched':'Mismatch'}</span>`:'<span class="text-xs text-gray-400">N/A</span>'}</td>
+      <td><span class="text-xs font-600 px-2 py-0.5 rounded-full ${statusClass}">${status}</span></td>
+    </tr>`;
+  });
+  html+=`</tbody></table></div>`;
+  $('mainContent').innerHTML=html;
+}
+
+// ===== DELIVERIES (RECEIVER) =====
+function renderDeliveries(){
+  const recs=getRecords(); // Already filtered for receiver
+  let html=`<div class="mb-4"><h2 class="text-xl font-800 text-sb-dark">Deliveries Awaiting Count</h2><p class="text-sm text-gray-500">Enter actual quantity received for each delivery</p></div>
+  <div class="bg-white rounded-xl border border-gray-200 overflow-x-auto">
+  <table><thead><tr><th>PO Number</th><th>Vendor</th><th>Description</th><th>Department</th><th>Status</th><th>Action</th></tr></thead><tbody>`;
+  if(!recs.length)html+=`<tr><td colspan="6" class="text-center text-gray-400 py-8">No deliveries awaiting count</td></tr>`;
+  recs.forEach(r=>{
+    const statusClass=r.deliveryQtyReceived!=null?'bg-green-100 text-green-700':'bg-amber-100 text-amber-700';
+    const statusText=r.deliveryQtyReceived!=null?'Counted':'Awaiting Count';
+    html+=`<tr>
+      <td class="font-600 text-sb-blue">${r.poNumber}</td>
+      <td>${r.vendor}</td><td class="max-w-[250px] truncate">${r.description}</td>
+      <td><span class="text-xs font-600 px-2 py-0.5 rounded-full bg-gray-100 text-gray-700">${r.department}</span></td>
+      <td><span class="text-xs font-600 px-2 py-0.5 rounded-full ${statusClass}">${statusText}</span></td>
+      <td>${r.deliveryQtyReceived==null?`<button onclick="openDeliveryModal(${r.id})" class="bg-sb-blue text-white px-3 py-1.5 rounded-lg text-xs font-600 hover:bg-sb-blue/90 transition">Enter Quantity</button>`:`<span class="text-xs text-gray-500">Done</span>`}</td>
+    </tr>`;
+  });
+  html+=`</tbody></table></div>`;
+  $('mainContent').innerHTML=html;
+}
+
+// ===== SETTINGS =====
+function renderSettings(){
+  const apiKey=localStorage.getItem('springbok_api_key')||'';
+  let html=`<div class="mb-4"><h2 class="text-xl font-800 text-sb-dark">Settings</h2><p class="text-sm text-gray-500">Configure vendor alert thresholds and integrations</p></div>
+  <div class="max-w-xl space-y-6">
+    <!-- Alert Settings -->
+    <div class="bg-white rounded-xl border border-gray-200 p-5">
+      <h3 class="font-700 text-sm text-sb-dark mb-4"><i class="fas fa-bell mr-2 text-sb-blue"></i>Vendor Invoice Alert Settings</h3>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div><label class="block text-xs font-600 text-gray-500 mb-1">Days before first alert</label>
+        <input type="number" id="setAlertFirst" value="${state.settings.alertDaysFirst}" min="1" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-sb-blue outline-none"></div>
+        <div><label class="block text-xs font-600 text-gray-500 mb-1">Days between follow-ups</label>
+        <input type="number" id="setAlertBetween" value="${state.settings.alertDaysBetween}" min="1" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-sb-blue outline-none"></div>
+        <div><label class="block text-xs font-600 text-gray-500 mb-1">Max follow-ups before escalation</label>
+        <input type="number" id="setAlertMax" value="${state.settings.alertMaxFollowups}" min="1" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-sb-blue outline-none"></div>
+      </div>
+      <button onclick="saveAlertSettings()" class="mt-4 bg-sb-blue text-white px-4 py-2 rounded-lg text-sm font-600 hover:bg-sb-blue/90 transition">Save Alert Settings</button>
+    </div>
+    <!-- API Key -->
+    <div class="bg-white rounded-xl border border-gray-200 p-5">
+      <h3 class="font-700 text-sm text-sb-dark mb-2"><i class="fas fa-key mr-2 text-sb-yellow"></i>Quote Scanning API Key</h3>
+      <p class="text-xs text-gray-500 mb-3">Enter your Anthropic Claude API key to enable vendor quote scanning. The key is stored locally in your browser.</p>
+      <div class="flex gap-2">
+        <input type="password" id="setApiKey" value="${apiKey}" placeholder="sk-ant-..." class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono focus:ring-2 focus:ring-sb-blue outline-none">
+        <button onclick="saveApiKey()" class="bg-sb-green text-white px-4 py-2 rounded-lg text-sm font-600 hover:bg-sb-green/90 transition">Save</button>
+      </div>
+    </div>
+    <!-- Data Management -->
+    <div class="bg-white rounded-xl border border-gray-200 p-5">
+      <h3 class="font-700 text-sm text-sb-dark mb-2"><i class="fas fa-database mr-2 text-gray-500"></i>Data Management</h3>
+      <p class="text-xs text-gray-500 mb-3">Reset all data to the original demo dataset. This cannot be undone.</p>
+      <button onclick="if(confirm('Reset all data to demo defaults?')){localStorage.removeItem('springbok-v2');location.reload()}" class="bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-600 hover:bg-red-700 transition">Reset Demo Data</button>
+    </div>
+  </div>`;
+  $('mainContent').innerHTML=html;
+}
+function saveAlertSettings(){
+  state.settings.alertDaysFirst=Math.max(1,parseInt($('setAlertFirst').value)||7);
+  state.settings.alertDaysBetween=Math.max(1,parseInt($('setAlertBetween').value)||5);
+  state.settings.alertMaxFollowups=Math.max(1,parseInt($('setAlertMax').value)||3);
+  saveData();showToast('Alert settings saved','success');
+}
+function saveApiKey(){
+  const key=$('setApiKey').value.trim();
+  if(key)localStorage.setItem('springbok_api_key',key);
+  else localStorage.removeItem('springbok_api_key');
+  showToast('API key saved','success');
+}
+
+// ===== DRAWER =====
+function openDrawer(id){
+  state.drawerRecordId=id;
+  const r=state.records.find(x=>x.id===id);
+  if(!r)return;
+  const showValue=can('see_value');
+  const showInvAmt=can('see_invoice_amounts');
+  const isSelfOwned=r.owner===state.user.name;
+  let html=`<div class="p-5 border-b border-gray-100 flex items-start justify-between">
+    <div>
+      <div class="text-xs text-gray-400 font-600 mb-1">${r.poNumber}</div>
+      <h3 class="font-800 text-sb-dark text-lg leading-tight">${r.description}</h3>
+      <p class="text-sm text-gray-500 mt-1">${r.vendor} &middot; ${r.department}</p>
+    </div>
+    <button onclick="closeDrawer()" class="text-gray-400 hover:text-gray-700 text-lg ml-4"><i class="fas fa-times"></i></button>
+  </div>
+  <div class="p-5 space-y-5">
+    <!-- Details Grid -->
+    <div class="grid grid-cols-2 gap-3 text-sm">
+      <div><span class="text-xs text-gray-400 block">Owner</span><span class="font-600">${r.owner}</span></div>
+      ${showValue?`<div><span class="text-xs text-gray-400 block">PO Value</span><span class="font-700 text-sb-dark">${fmtCur(r.value)}</span></div>`:''}
+      <div><span class="text-xs text-gray-400 block">Service Status</span><span class="font-600">${r.serviceStatus}</span></div>
+      <div><span class="text-xs text-gray-400 block">Completion</span><span class="font-600">${r.completion}%</span></div>
+      <div><span class="text-xs text-gray-400 block">GR Status</span><span class="font-600">${r.grStatus}${r.grRef?' — '+r.grRef:''}</span></div>
+      <div><span class="text-xs text-gray-400 block">GR Date</span><span class="font-600">${fmtDate(r.grDate)}</span></div>
+      ${can('see_invoice_controls')?`
+      <div><span class="text-xs text-gray-400 block">Invoice Status</span><span class="font-600">${r.invoiceStatus}</span></div>
+      <div><span class="text-xs text-gray-400 block">Invoice #</span><span class="font-600">${r.invoiceNumber||'—'}</span></div>
+      ${showInvAmt?`<div><span class="text-xs text-gray-400 block">Invoice Amount</span><span class="font-700">${fmtCur(r.invoiceAmount)}</span></div>`:''}
+      <div><span class="text-xs text-gray-400 block">ERP Inv. Ref</span><span class="font-600">${r.erpInvoiceRef||'—'}</span></div>
+      <div><span class="text-xs text-gray-400 block">Paid Date</span><span class="font-600">${fmtDate(r.paidDate)}</span></div>
+      `:''}
+      <div><span class="text-xs text-gray-400 block">Expected Date</span><span class="font-600">${fmtDate(r.expectedDate)}</span></div>
+      <div><span class="text-xs text-gray-400 block">Quote Ref</span><span class="font-600">${r.quoteRef||'—'}</span></div>
+      <div><span class="text-xs text-gray-400 block">Follow-ups</span><span class="font-600 ${r.escalated?'text-sb-red':''}">${r.followUpCount}${r.escalated?' — Escalated':''}</span></div>
+      <div><span class="text-xs text-gray-400 block">Reporting Period</span><span class="font-600">${r.reportingPeriod||'—'}</span></div>
+    </div>
+    ${r.escalated?'<div class="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-800 font-600"><i class="fas fa-exclamation-triangle mr-2"></i>This record has been escalated to management — maximum follow-ups reached.</div>':''}
+    <!-- Actions -->
+    <div class="space-y-2">`;
+  // Update completion (PO Owner, their own records, if not complete)
+  if(can('update_completion',r)&&r.serviceStatus!=='Completed'){
+    html+=`<div class="flex items-center gap-2">
+      <label class="text-xs font-600 text-gray-500 w-20">Completion</label>
+      <input type="range" min="0" max="99" value="${r.completion}" id="drawerCompletion" oninput="document.getElementById('drawerCompVal').textContent=this.value+'%'" class="flex-1 accent-sb-blue">
+      <span id="drawerCompVal" class="text-xs font-600 w-10 text-right">${r.completion}%</span>
+      <button onclick="doUpdateCompletion(${r.id})" class="bg-gray-100 text-gray-700 px-3 py-1.5 rounded-lg text-xs font-600 hover:bg-gray-200 transition">Update</button>
+    </div>`;
+  }
+  if(can('mark_complete',r)&&r.serviceStatus!=='Completed'){
+    html+=`<button onclick="doMarkComplete(${r.id})" class="w-full bg-sb-green text-white py-2.5 rounded-lg text-sm font-600 hover:bg-sb-green/90 transition"><i class="fas fa-check mr-2"></i>Mark Service Completed</button>`;
+  }
+  if(can('post_gr',r)&&r.serviceStatus==='Completed'&&r.grStatus==='Pending'){
+    html+=`<button onclick="openGRModal(${r.id})" class="w-full bg-sb-blue text-white py-2.5 rounded-lg text-sm font-600 hover:bg-sb-blue/90 transition"><i class="fas fa-clipboard-check mr-2"></i>Record ERP GR</button>`;
+  }
+  if(can('record_invoice',r)&&r.serviceStatus==='Completed'&&r.grStatus==='Posted'&&r.invoiceStatus==='Required'){
+    html+=`<button onclick="openInvoiceModal(${r.id})" class="w-full bg-sb-blue text-white py-2.5 rounded-lg text-sm font-600 hover:bg-sb-blue/90 transition"><i class="fas fa-file-invoice-dollar mr-2"></i>Record Invoice Received</button>`;
+  }
+  if(can('approve_invoice',r)&&r.invoiceStatus==='Received'){
+    const isHighValue=r.value>50000;
+    html+=`<button onclick="doApproveInvoice(${r.id})" class="w-full bg-sb-green text-white py-2.5 rounded-lg text-sm font-600 hover:bg-sb-green/90 transition"><i class="fas fa-check-double mr-2"></i>Approve Invoice${isHighValue?' (High Value — Senior Finance)':''}</button>`;
+  }
+  if(can('mark_paid',r)&&r.invoiceStatus==='Approved'){
+    html+=`<button onclick="doMarkPaid(${r.id})" class="w-full bg-gray-800 text-white py-2.5 rounded-lg text-sm font-600 hover:bg-gray-700 transition"><i class="fas fa-money-bill-wave mr-2"></i>Mark Paid</button>`;
+  }
+  if(can('flag_vendor',r)&&r.invoiceStatus==='Required'&&!r.escalated){
+    html+=`<button onclick="doFlagVendor(${r.id})" class="w-full bg-sb-orange text-white py-2.5 rounded-lg text-sm font-600 hover:bg-sb-orange/90 transition"><i class="fas fa-flag mr-2"></i>Flag Vendor for Follow-up</button>`;
+  }
+  if(can('send_alert',r)&&r.escalated){
+    html+=`<div class="w-full bg-red-100 text-red-800 py-2.5 rounded-lg text-sm font-600 text-center cursor-not-allowed"><i class="fas fa-exclamation-triangle mr-2"></i>Escalate to Management</div>`;
+  }
+  if(can('send_alert',r)&&!r.escalated&&r.grStatus==='Posted'&&r.invoiceStatus==='Required'){
+    html+=`<button onclick="closeDrawer();openAlertModal(${r.id})" class="w-full bg-amber-500 text-white py-2.5 rounded-lg text-sm font-600 hover:bg-amber-600 transition"><i class="fas fa-envelope mr-2"></i>Send Vendor Alert Email</button>`;
+  }
+  html+=`</div>
+    <!-- Timeline -->
+    <div>
+      <h4 class="font-700 text-sm text-sb-dark mb-3"><i class="fas fa-clock-rotate-left mr-2 text-gray-400"></i>Timeline</h4>
+      <div class="space-y-0 border-l-2 border-gray-200 ml-2 pl-4">`;
+  r.timeline.forEach(t=>{
+    html+=`<div class="relative pb-4">
+      <div class="absolute -left-[21px] top-1 w-3 h-3 rounded-full bg-sb-blue border-2 border-white"></div>
+      <div class="text-xs text-gray-400">${fmtDate(t.date)}</div>
+      <div class="text-sm font-600">${t.action}</div>
+      <div class="text-xs text-gray-500">by ${t.by}</div>
+    </div>`;
+  });
+  html+=`</div></div></div>`;
+  $('drawerContent').innerHTML=html;
+  $('drawerOverlay').classList.add('open');
+  $('drawerPanel').classList.add('open');
+}
+function closeDrawer(){$('drawerOverlay').classList.remove('open');$('drawerPanel').classList.remove('open');state.drawerRecordId=null}
+
+// ===== MODAL =====
+function openModal(html){$('modalBox').innerHTML=html;$('modalOverlay').classList.add('open')}
+function closeModal(){$('modalOverlay').classList.remove('open')}
+
+// ===== GR MODAL =====
+function openGRModal(id){
+  const r=state.records.find(x=>x.id===id);
+  openModal(`<div class="p-6">
+    <h3 class="font-800 text-sb-dark text-lg mb-1">Record ERP Goods Receipt</h3>
+    <p class="text-sm text-gray-500 mb-4">${r.poNumber} — ${r.vendor}</p>
+    <div class="mb-4"><label class="block text-xs font-600 text-gray-500 mb-1">ERP GR Reference Number</label>
+    <input type="text" id="grRefInput" placeholder="e.g. GR-2026-0042" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm font-mono focus:ring-2 focus:ring-sb-blue outline-none"></div>
+    <div class="flex justify-end gap-2">
+      <button onclick="closeModal()" class="px-4 py-2 rounded-lg text-sm font-600 border border-gray-300 hover:bg-gray-50 transition">Cancel</button>
+      <button onclick="doRecordGR(${id})" class="bg-sb-blue text-white px-4 py-2 rounded-lg text-sm font-600 hover:bg-sb-blue/90 transition">Post GR</button>
+    </div>
+  </div>`);
+}
+
+// ===== INVOICE MODAL =====
+function openInvoiceModal(id){
+  const r=state.records.find(x=>x.id===id);
+  openModal(`<div class="p-6">
+    <h3 class="font-800 text-sb-dark text-lg mb-1">Record Invoice Received</h3>
+    <p class="text-sm text-gray-500 mb-4">${r.poNumber} — ${r.vendor}</p>
+    <div class="space-y-4">
+      <div><label class="block text-xs font-600 text-gray-500 mb-1">Invoice Number</label>
+      <input type="text" id="invNumInput" placeholder="e.g. INV-ABC-1234" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm font-mono focus:ring-2 focus:ring-sb-blue outline-none"></div>
+      <div><label class="block text-xs font-600 text-gray-500 mb-1">Invoice Amount (ZAR)</label>
+      <input type="number" id="invAmtInput" value="${r.value}" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-sb-blue outline-none">
+      ${r.value!==null?`<p class="text-xs text-gray-400 mt-1">PO value: ${fmtCur(r.value)}</p>`:''}</div>
+    </div>
+    <div class="flex justify-end gap-2 mt-6">
+      <button onclick="closeModal()" class="px-4 py-2 rounded-lg text-sm font-600 border border-gray-300 hover:bg-gray-50 transition">Cancel</button>
+      <button onclick="doRecordInvoice(${id})" class="bg-sb-blue text-white px-4 py-2 rounded-lg text-sm font-600 hover:bg-sb-blue/90 transition">Record Invoice</button>
+    </div>
+  </div>`);
+}
+
+// ===== NEW PO MODAL =====
+function openNewPO(){
+  openModal(`<div class="p-6">
+    <h3 class="font-800 text-sb-dark text-lg mb-1">New Purchase Order</h3>
+    <p class="text-sm text-gray-500 mb-4">Create a new commitment in the system</p>
+    <!-- Scan Quote Button -->
+    <div class="mb-4">
+      <button onclick="triggerScan()" id="scanBtn" class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-600 hover:bg-indigo-700 transition"><i class="fas fa-camera mr-2"></i>Scan Vendor Quote</button>
+      <input type="file" id="scanFileInput" accept=".pdf,.png,.jpg,.jpeg,.webp" class="hidden" onchange="handleScanFile(this)">
+      <div id="scanStatus" class="mt-2 hidden"><i class="fas fa-spinner spin mr-2 text-indigo-600"></i><span class="text-sm text-gray-600">Scanning quote with AI...</span></div>
+    </div>
+    <div class="space-y-4">
+      <div class="grid grid-cols-2 gap-4">
+        <div><label class="block text-xs font-600 text-gray-500 mb-1">Vendor Name <span id="badgeVendor" class="scan-badge hidden">Scanned</span></label>
+        <input type="text" id="poVendor" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-sb-blue outline-none"></div>
+        <div><label class="block text-xs font-600 text-gray-500 mb-1">Department</label>
+        <select id="poDept" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-sb-blue outline-none">
+          <option value="${state.user.dept||''}" selected>${state.user.dept||'Select...'}</option>
+          ${DEPARTMENTS.filter(d=>d!==state.user.dept).map(d=>`<option value="${d}">${d}</option>`).join('')}
+        </select></div>
+      </div>
+      <div><label class="block text-xs font-600 text-gray-500 mb-1">Description of Services/Goods <span id="badgeDesc" class="scan-badge hidden">Scanned</span></label>
+      <textarea id="poDesc" rows="2" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-sb-blue outline-none"></textarea></div>
+      <div class="grid grid-cols-3 gap-4">
+        <div><label class="block text-xs font-600 text-gray-500 mb-1">PO Value (ZAR) <span id="badgeValue" class="scan-badge hidden">Scanned</span></label>
+        <input type="number" id="poValue" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-sb-blue outline-none"></div>
+        <div><label class="block text-xs font-600 text-gray-500 mb-1">Expected Date <span id="badgeDate" class="scan-badge hidden">Scanned</span></label>
+        <input type="date" id="poDate" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-sb-blue outline-none"></div>
+        <div><label class="block text-xs font-600 text-gray-500 mb-1">Quote Ref <span id="badgeRef" class="scan-badge hidden">Scanned</span></label>
+        <input type="text" id="poQuoteRef" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-sb-blue outline-none"></div>
+      </div>
+      <div><label class="block text-xs font-600 text-gray-500 mb-1">Ordered Quantity (optional)</label>
+      <input type="number" id="poQty" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-sb-blue outline-none" style="max-width:200px"></div>
+      <div id="scanWarnings"></div>
+    </div>
+    <div class="flex justify-end gap-2 mt-6">
+      <button onclick="closeModal()" class="px-4 py-2 rounded-lg text-sm font-600 border border-gray-300 hover:bg-gray-50 transition">Cancel</button>
+      <button onclick="doCreatePO()" class="bg-sb-green text-white px-4 py-2 rounded-lg text-sm font-600 hover:bg-sb-green/90 transition">Create PO</button>
+    </div>
+  </div>`);
+}
+
+// ===== DELIVERY MODAL (RECEIVER) =====
+function openDeliveryModal(id){
+  const r=state.records.find(x=>x.id===id);
+  openModal(`<div class="p-6">
+    <h3 class="font-800 text-sb-dark text-lg mb-1">Record Delivery Quantity</h3>
+    <p class="text-sm text-gray-500 mb-4">${r.poNumber} — ${r.vendor}</p>
+    <div class="mb-4"><label class="block text-xs font-600 text-gray-500 mb-1">Actual Quantity Received</label>
+    <input type="number" id="deliveryQty" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-sb-blue outline-none" style="max-width:200px"></div>
+    <div class="flex justify-end gap-2">
+      <button onclick="closeModal()" class="px-4 py-2 rounded-lg text-sm font-600 border border-gray-300 hover:bg-gray-50 transition">Cancel</button>
+      <button onclick="doEnterDeliveryQty(${id})" class="bg-sb-blue text-white px-4 py-2 rounded-lg text-sm font-600 hover:bg-sb-blue/90 transition">Save</button>
+    </div>
+  </div>`);
+}
+
+// ===== VENDOR EDIT MODAL =====
+function openVendorEditModal(name){
+  const ve=state.vendors[name]||{email:''};
+  openModal(`<div class="p-6">
+    <h3 class="font-800 text-sb-dark text-lg mb-1">Edit Vendor</h3>
+    <p class="text-sm text-gray-500 mb-4">${name}</p>
+    <div class="mb-4"><label class="block text-xs font-600 text-gray-500 mb-1">Vendor Email Address</label>
+    <input type="email" id="vendorEmailInput" value="${ve.email||''}" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-sb-blue outline-none"></div>
+    <div class="flex justify-end gap-2">
+      <button onclick="closeModal()" class="px-4 py-2 rounded-lg text-sm font-600 border border-gray-300 hover:bg-gray-50 transition">Cancel</button>
+      <button onclick="doSaveVendorEmail('${name.replace(/'/g,"\\'")}')" class="bg-sb-blue text-white px-4 py-2 rounded-lg text-sm font-600 hover:bg-sb-blue/90 transition">Save</button>
+    </div>
+  </div>`);
+}
+
+// ===== ALERT EMAIL MODAL =====
+function openAlertModal(id){
+  const r=state.records.find(x=>x.id===id);
+  const ve=state.vendors[r.vendor]||{};
+  const emailTo=ve.email||'[vendor email not on file]';
+  const subject=`Invoice required — ${r.poNumber} — ${r.vendor}`;
+  const body=`Dear ${r.vendor},
+
+We refer to Purchase Order ${r.poNumber} for "${r.description}", which was completed on ${fmtDate(r.timeline.find(t=>t.action.includes('complete'))?.date)}.
+
+The Goods Receipt (${r.grRef}) was posted on ${fmtDate(r.grDate)} in our ERP system, confirming receipt of services/goods to the value of R${Number(r.value).toLocaleString()}.
+
+ ${r.followUpCount>0?`Despite our previous ${r.followUpCount} reminder(s), we have not yet received your invoice. `:''}We kindly request that you submit your invoice within 5 business days of this notice.
+
+Please ensure the invoice references PO Number ${r.poNumber} and is sent to the Finance Department.
+
+Failure to submit the invoice may result in delays to payment processing.
+
+Regards,
+Springbok Finance Department`;
+  const isEscalated=r.escalated;
+  openModal(`<div class="p-6">
+    <h3 class="font-800 text-sb-dark text-lg mb-1"><i class="fas fa-envelope mr-2 text-amber-500"></i>Vendor Alert Email</h3>
+    <p class="text-sm text-gray-500 mb-4">${r.poNumber} — ${r.vendor}${isEscalated?' <span class="text-sb-red font-600">(Escalated)</span>':''}</p>
+    <div class="bg-gray-50 rounded-lg p-4 mb-4 space-y-3 text-sm">
+      <div><span class="text-xs text-gray-400 block">To</span><span class="font-600">${emailTo}</span></div>
+      <div><span class="text-xs text-gray-400 block">Subject</span><span class="font-600">${subject}</span></div>
+      <div><span class="text-xs text-gray-400 block">Body</span><pre class="whitespace-pre-wrap font-sans text-gray-700 mt-1">${body}</pre></div>
+    </div>
+    <div class="flex justify-end gap-2">
+      <button onclick="closeModal()" class="px-4 py-2 rounded-lg text-sm font-600 border border-gray-300 hover:bg-gray-50 transition">Cancel</button>
+      ${isEscalated?`<button disabled class="bg-red-300 text-white px-4 py-2 rounded-lg text-sm font-600 cursor-not-allowed">Escalate to Management</button>`
+      :`<button onclick="doMarkAlertSent(${id})" class="bg-amber-500 text-white px-4 py-2 rounded-lg text-sm font-600 hover:bg-amber-600 transition"><i class="fas fa-paper-plane mr-1"></i>Mark as Sent</button>`}
+    </div>
+    <!-- In a real system, this is where an SMTP or SendGrid API call would be made to actually send the email -->
+  </div>`);
+}
+
+// ===== ACTIONS =====
+function doUpdateCompletion(id){
+  const val=parseInt($('drawerCompletion').value);
+  const r=state.records.find(x=>x.id===id);
+  if(!r||val<0||val>99)return;
+  r.completion=val;
+  r.timeline.push({date:todayStr(),action:`Completion updated to ${val}%`,by:state.user.name});
+  saveData();openDrawer(id);setupSidebar();showToast('Completion updated','success');
+}
+function doMarkComplete(id){
+  const r=state.records.find(x=>x.id===id);
+  if(!r)return;
+  r.serviceStatus='Completed';r.completion=100;
+  r.timeline.push({date:todayStr(),action:'Service marked complete',by:state.user.name});
+  saveData();openDrawer(id);setupSidebar();showToast('Service marked as completed','success');
+}
+function doRecordGR(id){
+  const ref=$('grRefInput').value.trim();
+  if(!ref){showToast('Please enter a GR reference','error');return}
+  const r=state.records.find(x=>x.id===id);
+  if(!r)return;
+  r.grStatus='Posted';r.grRef=ref;r.grDate=todayStr();r.erpGrMatched=true;
+  r.timeline.push({date:todayStr(),action:`GR posted — ${ref}`,by:state.user.name});
+  saveData();closeModal();if(state.drawerRecordId===id)openDrawer(id);setupSidebar();render();showToast('GR recorded successfully','success');
+  // In a real system, this is where an ERP webhook call would be made to verify the GR reference
+}
+function doRecordInvoice(id){
+  const num=$('invNumInput').value.trim();
+  const amt=parseFloat($('invAmtInput').value);
+  if(!num){showToast('Please enter an invoice number','error');return}
+  if(isNaN(amt)||amt<=0){showToast('Please enter a valid amount','error');return}
+  const r=state.records.find(x=>x.id===id);
+  if(!r)return;
+  r.invoiceStatus='Received';r.invoiceNumber=num;r.invoiceAmount=amt;r.invoiceDate=todayStr();
+  r.timeline.push({date:todayStr(),action:`Invoice received — ${num} (${fmtCur(amt)})`,by:state.user.name});
+  saveData();closeModal();if(state.drawerRecordId===id)openDrawer(id);setupSidebar();render();showToast('Invoice recorded','success');
+}
+function doApproveInvoice(id){
+  const r=state.records.find(x=>x.id===id);
+  if(!r)return;
+  if(r.value>50000&&state.user.role!=='senior_finance'){showToast('High-value invoice requires Senior Finance approval','error');return}
+  const erpRef='ERP-INV-2026-'+String(Math.floor(Math.random()*9000)+1000);
+  r.invoiceStatus='Approved';r.erpInvoiceRef=erpRef;
+  r.timeline.push({date:todayStr(),action:`Invoice approved — ${erpRef}`,by:state.user.name});
+  saveData();if(state.drawerRecordId===id)openDrawer(id);setupSidebar();render();showToast('Invoice approved','success');
+}
+function doMarkPaid(id){
+  const r=state.records.find(x=>x.id===id);
+  if(!r)return;
+  r.invoiceStatus='Paid';r.paidDate=todayStr();
+  r.timeline.push({date:todayStr(),action:'Marked as paid',by:state.user.name});
+  saveData();if(state.drawerRecordId===id)openDrawer(id);setupSidebar();render();showToast('Record marked as paid','success');
+}
+function doFlagVendor(id){
+  const r=state.records.find(x=>x.id===id);
+  if(!r)return;
+  r.vendorFlagged=true;r.lastFollowUp=todayStr();r.followUpCount++;
+  if(state.vendors[r.vendor])state.vendors[r.vendor].flagged=true;
+  r.timeline.push({date:todayStr(),action:'Vendor flagged for follow-up',by:state.user.name});
+  saveData();if(state.drawerRecordId===id)openDrawer(id);render();showToast('Vendor flagged for follow-up','success');
+}
+function doMarkAlertSent(id){
+  const r=state.records.find(x=>x.id===id);
+  if(!r)return;
+  r.followUpCount++;r.lastFollowUp=todayStr();r.vendorFlagged=true;
+  if(state.vendors[r.vendor])state.vendors[r.vendor].flagged=true;
+  if(r.followUpCount>=state.settings.alertMaxFollowups){
+    r.escalated=true;
+    r.timeline.push({date:todayStr(),action:`Vendor alert #${r.followUpCount} sent — escalated to management`,by:state.user.name});
+  }else{
+    r.timeline.push({date:todayStr(),action:`Vendor alert #${r.followUpCount} sent`,by:state.user.name});
+  }
+  saveData();closeModal();render();showToast('Alert marked as sent','success');
+}
+function sendAllAlerts(){
+  const recs=getAlertDueRecords(state.records);
+  if(!recs.length){showToast('No alerts due','info');return}
+  recs.forEach(r=>{
+    r.followUpCount++;r.lastFollowUp=todayStr();r.vendorFlagged=true;
+    if(state.vendors[r.vendor])state.vendors[r.vendor].flagged=true;
+    if(r.followUpCount>=state.settings.alertMaxFollowups){
+      r.escalated=true;
+      r.timeline.push({date:todayStr(),action:`Vendor alert #${r.followUpCount} sent — escalated`,by:state.user.name});
+    }else{
+      r.timeline.push({date:todayStr(),action:`Vendor alert #${r.followUpCount} sent`,by:state.user.name});
+    }
+  });
+  saveData();render();showToast(`${recs.length} alert(s) marked as sent`,'success');
+}
+function doCreatePO(){
+  const vendor=$('poVendor').value.trim();
+  const dept=$('poDept').value;
+  const desc=$('poDesc').value.trim();
+  const value=parseFloat($('poValue').value);
+  const expDate=$('poDate').value;
+  const quoteRef=$('poQuoteRef').value.trim();
+  const qty=$('poQty').value?parseInt($('poQty').value):null;
+  if(!vendor){showToast('Vendor name is required','error');return}
+  if(!desc){showToast('Description is required','error');return}
+  if(isNaN(value)||value<=0){showToast('PO value is required','error');return}
+  if(!dept){showToast('Department is required','error');return}
+  const maxNum=state.records.reduce((m,x)=>{const n=parseInt(x.poNumber.split('-').pop());return n>m?n:m},0);
+  const newRec={
+    id:Date.now(),poNumber:`PO-2026-${String(maxNum+1).padStart(3,'0')}`,vendor,description:desc,department:dept,value,owner:state.user.name,
+    serviceStatus:'In Progress',completion:0,grStatus:'Pending',grRef:null,grDate:null,
+    invoiceStatus:'Required',invoiceNumber:null,invoiceAmount:null,invoiceDate:null,erpInvoiceRef:null,
+    followUpCount:0,lastFollowUp:null,vendorFlagged:false,escalated:false,paidDate:null,
+    expectedDate:expDate||null,quoteRef:quoteRef||null,lineItems:[],orderedQty:qty,deliveryQtyReceived:null,
+    erpGrMatched:false,erpInvoiceMatched:false,createdDate:todayStr(),
+    reportingPeriod:expDate?expDate.substring(0,7):'2026-08',
+    timeline:[{date:todayStr(),action:'PO created',by:state.user.name}]
+  };
+  if(!state.vendors[vendor])state.vendors[vendor]={email:'',flagged:false};
+  state.records.unshift(newRec);
+  saveData();closeModal();render();showToast('PO created successfully','success');
+}
+function doEnterDeliveryQty(id){
+  const qty=parseInt($('deliveryQty').value);
+  if(isNaN(qty)||qty<0){showToast('Please enter a valid quantity','error');return}
+  const r=state.records.find(x=>x.id===id);
+  if(!r)return;
+  r.deliveryQtyReceived=qty;
+  r.timeline.push({date:todayStr(),action:`Delivery quantity recorded: ${qty}`,by:state.user.name});
+  saveData();closeModal();render();showToast('Delivery quantity recorded','success');
+}
+function doSaveVendorEmail(name){
+  const email=$('vendorEmailInput').value.trim();
+  if(!state.vendors[name])state.vendors[name]={email:'',flagged:false};
+  state.vendors[name].email=email;
+  saveData();closeModal();render();showToast('Vendor email updated','success');
+}
+
+// ===== ALERT LOGIC =====
+function getAlertDueRecords(recs){
+  const s=state.settings;
+  return recs.filter(r=>{
+    if(r.grStatus!=='Posted'||r.invoiceStatus!=='Required'||r.escalated)return false;
+    const daysSinceGR=daysBetween(r.grDate,todayStr());
+    if(r.followUpCount===0)return daysSinceGR>=s.alertDaysFirst;
+    const daysSinceFollow=daysBetween(r.lastFollowUp,todayStr());
+    return daysSinceFollow>=s.alertDaysBetween&&r.followUpCount<s.alertMaxFollowups;
+  });
+}
+
+// ===== QUOTE SCANNING =====
+function triggerScan(){$('scanFileInput').click()}
+function handleScanFile(input){
+  const file=input.files[0];
+  if(!file)return;
+  if(file.size>4*1024*1024){showToast('File is too large (max 4MB)','error');input.value='';return}
+  const apiKey=localStorage.getItem('springbok_api_key');
+  if(!apiKey){showToast('Please set your Claude API key in Settings first','error');input.value='';return}
+  $('scanStatus').classList.remove('hidden');
+  $('scanBtn').disabled=true;
+  const reader=new FileReader();
+  reader.onload=async(e)=>{
+    const base64=e.target.result.split(',')[1];
+    const mediaType=file.type||'application/pdf';
+    try{
+      const resp=await fetch('https://api.anthropic.com/v1/messages',{
+        method:'POST',
+        headers:{'x-api-key':apiKey,'anthropic-version':'2023-06-01','content-type':'application/json'},
+        body:JSON.stringify({
+          model:'claude-sonnet-4-6',max_tokens:1024,
+          system:'You are a data extraction assistant. Extract information from this quote/document and return ONLY a valid JSON object with these keys: "vendor" (string, company name), "description" (string, description of services/goods), "value" (number, total value), "expectedDate" (string, date in YYYY-MM-DD format if found, otherwise null), "quoteRef" (string, quote/reference number if found, otherwise null), "lineItems" (array of objects with "description" and "value" keys if line items found, otherwise empty array). Return only the JSON, no other text.',
+          messages:[{role:'user',content:[{type:mediaType.startsWith('image/')?'image':'document',source:{type:'base64',media_type:mediaType,data:base64}}]}]
+        })
+      });
+      if(!resp.ok)throw new Error(`API error: ${resp.status} ${resp.statusText}`);
+      const data=await resp.json();
+      const text=data.content[0].text;
+      let parsed;
+      try{parsed=JSON.parse(text)}catch{
+        const m=text.match(/```(?:json)?\s*([\s\S]*?)```/);
+        if(m)parsed=JSON.parse(m[1]);else throw new Error('Invalid JSON from API');
+      }
+      populateFormFromScan(parsed);
+    }catch(err){
+      showToast('Scan failed: '+err.message,'error');
+    }finally{
+      $('scanStatus').classList.add('hidden');
+      $('scanBtn').disabled=false;
+      input.value='';
+    }
+  };
+  reader.readAsDataURL(file);
+}
+function populateFormFromScan(data){
+  const warnings=[];
+  const fields=[
+    {key:'vendor',el:'poVendor',badge:'badgeVendor'},
+    {key:'description',el:'poDesc',badge:'badgeDesc'},
+    {key:'value',el:'poValue',badge:'badgeValue'},
+    {key:'expectedDate',el:'poDate',badge:'badgeDate'},
+    {key:'quoteRef',el:'poQuoteRef',badge:'badgeRef'}
+  ];
+  fields.forEach(f=>{
+    const val=data[f.key];
+    if(val!=null&&val!==''&&val!==0){
+      $(f.el).value=val;
+      $(f.badge).classList.remove('hidden');
+    }else{
+      if(f.key!=='quoteRef'&&f.key!=='expectedDate')warnings.push(f.key);
+    }
+  });
+  if(warnings.length){
+    $('scanWarnings').innerHTML=warnings.map(w=>`<div class="bg-amber-50 border border-amber-200 rounded-lg p-2 text-xs text-amber-800 mb-1"><i class="fas fa-exclamation-circle mr-1"></i>Could not extract ${w} — please fill manually</div>`).join('');
+  }
+  showToast('Quote scanned — please review the extracted data','success');
+}
+
+// ===== CSV EXPORT =====
+function exportCSV(view){
+  let recs=getRecords();
+  if(view==='commitments'){
+    // Already filtered
+  }else if(view==='grqueue'){
+    recs=state.records.filter(x=>x.serviceStatus==='Completed'&&x.grStatus==='Pending');
+  }else if(view==='invoicecontrol'){
+    recs=state.records.filter(x=>x.serviceStatus==='Completed');
+  }
+  const headers=['PO Number','Vendor','Description','Department','Value','Owner','Service Status','Completion','GR Status','GR Ref','GR Date','Invoice Status','Invoice #','Invoice Amount','ERP Inv Ref','Follow-ups','Escalated','Paid Date','Expected Date','Quote Ref','Reporting Period'];
+  const rows=recs.map(r=>[r.poNumber,r.vendor,r.description,r.department,r.value,r.owner,r.serviceStatus,r.completion,r.grStatus,r.grRef,r.grDate,r.invoiceStatus,r.invoiceNumber,r.invoiceAmount,r.erpInvoiceRef,r.followUpCount,r.escalated,r.paidDate,r.expectedDate,r.quoteRef,r.reportingPeriod]);
+  let csv=headers.join(',')+'\n';
+  rows.forEach(row=>{csv+=row.map(v=>`"${String(v??'').replace(/"/g,'""')}"`).join(',')+'\n'});
+  const blob=new Blob([csv],{type:'text/csv'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download=`springbok_export_${todayStr()}.csv`;a.click();
+  URL.revokeObjectURL(url);
+  showToast('CSV exported','success');
+}
+
+// ===== TOAST =====
+function showToast(msg,type='info'){
+  const colors={success:'bg-sb-green text-white',error:'bg-sb-red text-white',info:'bg-sb-blue text-white'};
+  const icons={success:'fa-check-circle',error:'fa-exclamation-circle',info:'fa-info-circle'};
+  const el=document.createElement('div');
+  el.className=`toast ${colors[type]||colors.info} px-4 py-3 rounded-lg shadow-lg text-sm font-600 flex items-center gap-2`;
+  el.innerHTML=`<i class="fas ${icons[type]||icons.info}"></i>${msg}`;
+  $('toastContainer').appendChild(el);
+  setTimeout(()=>el.remove(),3000);
+}
+
+// ===== LOGIN ROLE CHANGE =====
+ $('loginRole').addEventListener('change',function(){
+  $('loginDeptWrap').classList.toggle('hidden',this.value!=='po_owner');
+});
+
+// ===== INIT =====
+loadData();
+if(!restoreSession()){
+  // Show login screen — already visible by default
+}
+</script>
+</body>
+</html>
