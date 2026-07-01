@@ -1,0 +1,66 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: springbok-postgres
+    environment:
+      POSTGRES_USER: ${DB_USER:-finance_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-secure_password}
+      POSTGRES_DB: ${DB_NAME:-springbok_finance}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./src/db/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-finance_user}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - springbok-network
+
+  # Backend API
+  backend:
+    build: .
+    container_name: springbok-backend
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT: ${PORT:-3000}
+      DATABASE_URL: postgresql://${DB_USER:-finance_user}:${DB_PASSWORD:-secure_password}@postgres:5432/${DB_NAME:-springbok_finance}
+      JWT_SECRET: ${JWT_SECRET:-your-super-secret-key}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-your-refresh-secret}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5173,http://localhost:3000}
+    ports:
+      - "${PORT:-3000}:${PORT:-3000}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./logs:/app/logs
+    networks:
+      - springbok-network
+    restart: unless-stopped
+
+  # pgAdmin (optional - for database management)
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: springbok-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@springbok.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgres
+    networks:
+      - springbok-network
+
+networks:
+  springbok-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
